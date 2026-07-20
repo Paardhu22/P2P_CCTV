@@ -5,9 +5,19 @@ import { typography, colors, spacing } from '../src/theme';
 import { useCameraSetup } from '../src/hooks/useCameraSetup';
 import { Camera } from 'react-native-vision-camera';
 import { router } from 'expo-router';
+import { useSignaling } from '../src/hooks/useSignaling';
 
 export default function CameraScreen() {
   const { device, hasPermission, requestPermission, isInitializing } = useCameraSetup();
+  const { connectionState } = useSignaling();
+
+  const getStatusColor = () => {
+    switch(connectionState) {
+      case 'Connected': return 'green';
+      case 'Connecting': return 'orange';
+      default: return 'red';
+    }
+  };
 
   if (isInitializing) {
     return (
@@ -61,7 +71,10 @@ export default function CameraScreen() {
 
       {/* Bottom Control Bar */}
       <View style={styles.bottomBar}>
-        <Text style={typography.title}>Status: Ready</Text>
+        <View style={styles.statusContainer}>
+          <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
+          <Text style={typography.title}>{connectionState}</Text>
+        </View>
         <Button title="Pair Device" onPress={() => router.push('/camera/pairing')} />
       </View>
     </Screen>
@@ -112,5 +125,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.surface,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: spacing.s,
   },
 });
