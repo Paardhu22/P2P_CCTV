@@ -6,7 +6,8 @@ export function usePeerConnection() {
   const [peerState, setPeerState] = useState<PeerStateInfo>({
     connectionState: 'Disconnected',
     signalingState: 'closed',
-    iceConnectionState: 'closed'
+    iceConnectionState: 'closed',
+    remoteStream: null
   });
 
   useEffect(() => {
