@@ -6,10 +6,12 @@ import { useCameraSetup } from '../src/hooks/useCameraSetup';
 import { Camera } from 'react-native-vision-camera';
 import { router } from 'expo-router';
 import { useSignaling } from '../src/hooks/useSignaling';
+import { usePeerConnection } from '../src/hooks/usePeerConnection';
 
 export default function CameraScreen() {
   const { device, hasPermission, requestPermission, isInitializing } = useCameraSetup();
   const { connectionState } = useSignaling();
+  const { peerState } = usePeerConnection();
 
   const getStatusColor = () => {
     switch(connectionState) {
@@ -67,6 +69,16 @@ export default function CameraScreen() {
           device={device}
           isActive={true}
         />
+        <View style={styles.debugOverlay}>
+          <Text style={styles.debugText}>Signaling: {connectionState}</Text>
+          <Text style={styles.debugText}>Peer: {peerState.connectionState}</Text>
+          <Text style={styles.debugText}>ICE: {peerState.iceConnectionState}</Text>
+          <Text style={styles.debugText}>WebRTC Sig: {peerState.signalingState}</Text>
+          
+          {peerState.connectionState === 'Disconnected' && (
+            <Text style={styles.waitingText}>Waiting for Peer...</Text>
+          )}
+        </View>
       </View>
 
       {/* Bottom Control Bar */}
@@ -136,4 +148,23 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginRight: spacing.s,
   },
+  debugOverlay: {
+    position: 'absolute',
+    top: spacing.m,
+    left: spacing.m,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: spacing.m,
+    borderRadius: spacing.s,
+  },
+  debugText: {
+    color: '#00ff00',
+    fontFamily: 'monospace',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  waitingText: {
+    color: '#ffcc00',
+    fontWeight: 'bold',
+    marginTop: spacing.s,
+  }
 });
