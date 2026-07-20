@@ -5,17 +5,25 @@ import { typography, colors, spacing } from '../src/theme';
 import { useCameraSetup } from '../src/hooks/useCameraSetup';
 import { Camera } from 'react-native-vision-camera';
 import { router } from 'expo-router';
-import { RTCView } from 'react-native-webrtc';
 import { useSignaling } from '../src/hooks/useSignaling';
 import { usePeerConnection } from '../src/hooks/usePeerConnection';
 import { useVideoStream } from '../src/hooks/useVideoStream';
+import { useRecording } from '../src/hooks/useRecording';
 
 export default function CameraScreen() {
   const { device, hasPermission, requestPermission, isInitializing } = useCameraSetup();
   const { connectionState } = useSignaling();
   const { peerState } = usePeerConnection();
   const isViewerConnected = peerState.connectionState === 'Connected';
-  const { stream, streamingState, error } = useVideoStream(isViewerConnected);
+  const { streamingState, error } = useVideoStream(isViewerConnected);
+
+  const { recordingState, durationSec, videoOutput, startRecording, stopRecording } = useRecording();
+
+  const formatDuration = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = (sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   const getStatusColor = () => {
     switch(connectionState) {
@@ -80,18 +88,23 @@ export default function CameraScreen() {
 
       {/* Camera Preview */}
       <View style={styles.cameraContainer}>
-        {isViewerConnected && stream ? (
-          <RTCView
-            streamURL={stream.toURL()}
-            style={StyleSheet.absoluteFill}
-            objectFit="cover"
-          />
-        ) : (
-          <Camera
-            style={StyleSheet.absoluteFill}
-            device={device}
-            isActive={true}
-          />
+        <Camera
+          style={StyleSheet.absoluteFill}
+          device={device}
+          isActive={true}
+          outputs={[videoOutput]}
+        />
+
+        {recordingState === 'Recording' && (
+          <View style={styles.recordingIndicator}>
+            <View style={styles.recDot} />
+            <Text style={styles.recText}>REC {formatDuration(durationSec)}</Text>
+          </View>
+        )}
+        {(recordingState === 'Saving' || recordingState === 'Saved') && (
+          <View style={styles.recordingIndicator}>
+            <Text style={styles.recText}>{recordingState}...</Text>
+          </View>
         )}
         
         <View style={styles.debugOverlay}>
@@ -115,6 +128,15 @@ export default function CameraScreen() {
           <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
           <Text style={typography.title}>{connectionState}</Text>
         </View>
+        
+        {recordingState === 'Idle' || recordingState === 'Saved' || recordingState === 'Error' ? (
+          <Button title="Record" onPress={startRecording} />
+        ) : recordingState === 'Recording' ? (
+          <Button title="Stop REC" onPress={stopRecording} style={{ backgroundColor: 'red' }} />
+        ) : (
+          <Button title="..." disabled />
+        )}
+
         <Button title="Pair Device" onPress={() => router.push('/camera/pairing')} />
       </View>
     </Screen>
@@ -210,5 +232,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: spacing.s,
     fontSize: 12,
+  },
+  recordingIndicator: {
+    position: 'absolute',
+    top: spacing.m,
+    right: spacing.m,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.s,
+    borderRadius: spacing.m,
+  },
+  recDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'red',
+    marginRight: spacing.s,
+  },
+  recText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
   }
 });
