@@ -1,4 +1,4 @@
-import { RTCPeerConnection, RTCIceCandidate, RTCSessionDescription } from 'react-native-webrtc';
+import { RTCPeerConnection, RTCIceCandidate, RTCSessionDescription, MediaStream } from 'react-native-webrtc';
 import { signalingService } from '../signaling/signaling.service';
 import { WebRTCPeerState, PeerStateInfo } from './types';
 
@@ -13,6 +13,8 @@ class PeerService {
   private connectionState: WebRTCPeerState = 'Disconnected';
   private signalingState: string = 'closed';
   private iceConnectionState: string = 'closed';
+  private remoteStream: MediaStream | null = null;
+  private localStream: MediaStream | null = null;
 
   constructor() {
     this.unsubscribeSignaling = signalingService.subscribeToMessages(this.handleSignalingMessage.bind(this));
@@ -28,7 +30,8 @@ class PeerService {
     this.stateListeners.forEach(l => l({
       connectionState: this.connectionState,
       signalingState: this.signalingState,
-      iceConnectionState: this.iceConnectionState
+      iceConnectionState: this.iceConnectionState,
+      remoteStream: this.remoteStream
     }));
   }
 
@@ -62,6 +65,12 @@ class PeerService {
       ]
     });
 
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => {
+        this.pc!.addTrack(track, this.localStream!);
+      });
+    }
+
     const pcAny = this.pc as any;
     pcAny.addEventListener('connectionstatechange', () => this.updateStates());
     pcAny.addEventListener('iceconnectionstatechange', () => this.updateStates());
@@ -73,6 +82,13 @@ class PeerService {
           type: 'ice_candidate',
           candidate: event.candidate.toJSON()
         } as any);
+      }
+    });
+
+    pcAny.addEventListener('track', (event: any) => {
+      if (event.streams && event.streams[0]) {
+        this.remoteStream = event.streams[0];
+        this.notifyListeners();
       }
     });
 
@@ -107,7 +123,15 @@ class PeerService {
     this.connectionState = 'Closed';
     this.signalingState = 'closed';
     this.iceConnectionState = 'closed';
+    this.remoteStream = null;
+    this.localStream = null;
     this.notifyListeners();
+  }
+
+  public setLocalStream(stream: MediaStream | null) {
+    this.localStream = stream;
+    // If connection already exists, we might need renegotiation. 
+    // For this simple case, we assume setLocalStream is called before connection.
   }
 
   private async handleSignalingMessage(msg: any) {
