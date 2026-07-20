@@ -64,6 +64,13 @@ async def websocket_endpoint(websocket: WebSocket):
                             "type": "online_devices_response",
                             "devices": online_devices
                         }))
+                    else:
+                        # Generic router for WebRTC signaling (offer, answer, candidate)
+                        target_id = msg.get("targetDeviceId")
+                        if target_id and target_id in manager.active_connections:
+                            # Attach the sender's deviceId so the target knows who it's from
+                            msg["senderDeviceId"] = device_id
+                            await manager.send_personal_message(json.dumps(msg), target_id)
             except WebSocketDisconnect:
                 manager.disconnect(device_id)
         else:
