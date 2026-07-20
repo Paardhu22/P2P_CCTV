@@ -4,6 +4,7 @@ import { Screen, Button } from '../src/components';
 import { typography, colors, spacing } from '../src/theme';
 import { useCameraSetup } from '../src/hooks/useCameraSetup';
 import { Camera } from 'react-native-vision-camera';
+import { router } from 'expo-router';
 
 export default function CameraScreen() {
   const { device, hasPermission, requestPermission, isInitializing } = useCameraSetup();
@@ -61,7 +62,7 @@ export default function CameraScreen() {
       {/* Bottom Control Bar */}
       <View style={styles.bottomBar}>
         <Text style={typography.title}>Status: Ready</Text>
-        <Button title="Pair Device" onPress={() => {}} />
+        <Button title="Pair Device" onPress={() => router.push('/camera/pairing')} />
       </View>
     </Screen>
   );
