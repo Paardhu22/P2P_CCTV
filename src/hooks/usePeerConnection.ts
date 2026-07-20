@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { peerService } from '../services/webrtc/peer.service';
 import { PeerStateInfo } from '../services/webrtc/types';
 
@@ -17,13 +17,13 @@ export function usePeerConnection() {
     return () => { unsubscribe(); };
   }, []);
 
-  const connectToPeer = (peerId: string) => {
+  const connectToPeer = useCallback((peerId: string) => {
     peerService.connectToPeer(peerId);
-  };
+  }, []);
 
-  const disconnectPeer = () => {
+  const disconnectPeer = useCallback(() => {
     peerService.close();
-  };
+  }, []);
 
   return { peerState, connectToPeer, disconnectPeer };
 }
