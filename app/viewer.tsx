@@ -5,10 +5,12 @@ import { typography, colors, spacing } from '../src/theme';
 import { usePairingStore } from '../src/store/usePairingStore';
 import { router } from 'expo-router';
 import { useSignaling } from '../src/hooks/useSignaling';
+import { usePeerConnection } from '../src/hooks/usePeerConnection';
 
 export default function ViewerScreen() {
   const { devices, removeDevice } = usePairingStore();
   const { connectionState } = useSignaling();
+  const { peerState, connectToPeer, disconnectPeer } = usePeerConnection();
 
   const getStatusColor = () => {
     switch(connectionState) {
@@ -53,15 +55,32 @@ export default function ViewerScreen() {
             <View>
               <Text style={typography.h2}>{item.name}</Text>
               <Text style={typography.bodySecondary}>ID: {item.id}</Text>
-              <Text style={typography.bodySecondary}>
-                Paired: {new Date(item.pairedAt).toLocaleDateString()}
-              </Text>
+              <View style={styles.debugBox}>
+                <Text style={styles.debugText}>Peer: {peerState.connectionState}</Text>
+                <Text style={styles.debugText}>ICE: {peerState.iceConnectionState}</Text>
+                <Text style={styles.debugText}>WebRTC Sig: {peerState.signalingState}</Text>
+              </View>
             </View>
-            <Button 
-              title="Remove" 
-              onPress={() => removeDevice(item.id)} 
-              style={styles.removeBtn} 
-            />
+            <View style={styles.actionButtons}>
+              {peerState.connectionState === 'Disconnected' ? (
+                <Button 
+                  title="Connect" 
+                  onPress={() => connectToPeer(item.id)} 
+                  style={styles.connectBtn}
+                />
+              ) : (
+                <Button 
+                  title="Disconnect" 
+                  onPress={() => disconnectPeer()} 
+                  style={styles.removeBtn}
+                />
+              )}
+              <Button 
+                title="Remove" 
+                onPress={() => removeDevice(item.id)} 
+                style={styles.removeBtn} 
+              />
+            </View>
           </View>
         )}
       />
@@ -109,6 +128,11 @@ const styles = StyleSheet.create({
   },
   removeBtn: {
     backgroundColor: colors.error,
+    marginTop: spacing.s,
+  },
+  connectBtn: {
+    backgroundColor: colors.primary,
+    marginTop: spacing.s,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -121,4 +145,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginRight: spacing.s,
   },
+  debugBox: {
+    marginTop: spacing.s,
+    backgroundColor: colors.surface,
+    padding: spacing.s,
+    borderRadius: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  debugText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: colors.text,
+  },
+  actionButtons: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+  }
 });
