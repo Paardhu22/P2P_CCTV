@@ -1,6 +1,7 @@
 import { RTCPeerConnection, RTCIceCandidate, RTCSessionDescription, MediaStream } from 'react-native-webrtc';
 import { signalingService } from '../signaling/signaling.service';
 import { WebRTCPeerState, PeerStateInfo } from './types';
+import { Logger } from '../../utils/logger';
 
 type StateListener = (state: PeerStateInfo) => void;
 
@@ -73,7 +74,13 @@ class PeerService {
 
     const pcAny = this.pc as any;
     pcAny.addEventListener('connectionstatechange', () => this.updateStates());
-    pcAny.addEventListener('iceconnectionstatechange', () => this.updateStates());
+    pcAny.addEventListener('iceconnectionstatechange', () => {
+      this.updateStates();
+      if (this.pc && (this.pc.iceConnectionState === 'failed' || this.pc.iceConnectionState === 'disconnected')) {
+        Logger.warn("ICE Connection failed/disconnected. Attempting ICE Restart.");
+        this.reconnectPeer();
+      }
+    });
     pcAny.addEventListener('signalingstatechange', () => this.updateStates());
 
     pcAny.addEventListener('icecandidate', (event: any) => {
@@ -108,14 +115,30 @@ class PeerService {
         sdp: offer.sdp
       } as any);
     } catch (e) {
-      console.warn("Failed to create offer:", e);
+      Logger.warn("Failed to create offer:", e);
       this.connectionState = 'Failed';
       this.notifyListeners();
     }
   }
 
+  private async reconnectPeer() {
+    if (!this.pc || !this.currentPeerId) return;
+    try {
+      const offer = await this.pc.createOffer({ iceRestart: true });
+      await this.pc.setLocalDescription(offer);
+      signalingService.sendToDevice(this.currentPeerId, {
+        type: 'offer',
+        sdp: offer.sdp
+      } as any);
+    } catch (e) {
+      Logger.error("Failed ICE restart:", e);
+    }
+  }
+
   public close() {
     if (this.pc) {
+      // Remove all tracks
+      this.pc.getSenders().forEach(sender => this.pc?.removeTrack(sender));
       this.pc.close();
       this.pc = null;
     }
@@ -152,7 +175,7 @@ class PeerService {
           sdp: answer.sdp
         } as any);
       } catch (e) {
-        console.warn("Error handling offer:", e);
+        Logger.warn("Error handling offer:", e);
       }
     } else if (msg.type === 'answer') {
       try {
@@ -160,7 +183,7 @@ class PeerService {
           await this.pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: msg.sdp }));
         }
       } catch (e) {
-        console.warn("Error handling answer:", e);
+        Logger.warn("Error handling answer:", e);
       }
     } else if (msg.type === 'ice_candidate') {
       try {
@@ -168,7 +191,7 @@ class PeerService {
           await this.pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
         }
       } catch (e) {
-        console.warn("Error adding ICE candidate:", e);
+        Logger.warn("Error adding ICE candidate:", e);
       }
     }
   }
