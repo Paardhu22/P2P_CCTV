@@ -1,4 +1,6 @@
-type MessageHandler = (data: string) => void;
+import { Logger } from '../../utils/logger';
+
+type MessageHandler = (data: any) => void;
 type StateHandler = (connected: boolean) => void;
 
 export class RobustWebSocket {
@@ -44,7 +46,7 @@ export class RobustWebSocket {
     };
     
     this.ws.onerror = (error) => {
-      console.warn("WebSocket error");
+      Logger.warn("WebSocket error");
     };
   }
 
@@ -56,17 +58,26 @@ export class RobustWebSocket {
     }
   }
 
+  forceReconnect() {
+    this.isIntentionalClose = false;
+    if (this.ws) {
+      this.ws.close(); // triggers onclose which schedules reconnect
+    } else {
+      this.scheduleReconnect();
+    }
+  }
+
   send(data: string) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(data);
     } else {
-      console.warn("Attempted to send message while WebSocket is not open");
+      Logger.warn("Attempted to send message while WebSocket is not open");
     }
   }
 
   private scheduleReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.warn("Max reconnect attempts reached.");
+      Logger.warn("Max reconnect attempts reached.");
       return;
     }
     
