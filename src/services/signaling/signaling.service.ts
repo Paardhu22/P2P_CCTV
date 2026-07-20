@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { RobustWebSocket } from './websocket';
 import { ConnectionState, SignalingMessage, RegisterMessage, PingMessage, GetOnlineDevicesMessage } from './types';
 import { storage } from '../../store/useAppStore';
+import { Logger } from '../../utils/logger';
 
 const SIGNALING_URL = 'ws://192.168.1.100:8000/ws'; 
 const DEVICE_ID_KEY = 'app.device_id';
@@ -13,6 +14,7 @@ class SignalingService {
   private ws: RobustWebSocket | null = null;
   private state: ConnectionState = 'Offline';
   private pingInterval: ReturnType<typeof setInterval> | null = null;
+  private pongTimeout: ReturnType<typeof setTimeout> | null = null;
   private stateListeners: Set<StateListener> = new Set();
   private messageListeners: Set<MessageListener> = new Set();
 
@@ -76,11 +78,16 @@ class SignalingService {
   private handleMessage(data: string) {
     try {
       const parsed = JSON.parse(data) as SignalingMessage;
-      if (parsed.type !== 'pong') {
+      if (parsed.type === 'pong') {
+        if (this.pongTimeout) {
+          clearTimeout(this.pongTimeout);
+          this.pongTimeout = null;
+        }
+      } else {
         this.messageListeners.forEach(l => l(parsed));
       }
     } catch (e) {
-      console.warn("Failed to parse signaling message:", e);
+      Logger.warn("Failed to parse signaling message:", e);
     }
   }
 
@@ -108,6 +115,11 @@ class SignalingService {
     this.pingInterval = setInterval(() => {
       const pingMsg: PingMessage = { type: 'ping' };
       this.send(pingMsg);
+      
+      this.pongTimeout = setTimeout(() => {
+        Logger.warn("Pong timeout, forcing reconnect");
+        this.ws?.forceReconnect();
+      }, 10000);
     }, 30000); 
   }
 
@@ -115,6 +127,10 @@ class SignalingService {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
       this.pingInterval = null;
+    }
+    if (this.pongTimeout) {
+      clearTimeout(this.pongTimeout);
+      this.pongTimeout = null;
     }
   }
 
