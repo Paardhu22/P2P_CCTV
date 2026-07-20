@@ -8,6 +8,42 @@ import { useSignaling } from '../src/hooks/useSignaling';
 import { usePeerConnection } from '../src/hooks/usePeerConnection';
 import { RTCView } from 'react-native-webrtc';
 
+const DeviceCard = React.memo(({ item, peerState, onConnect, onDisconnect, onRemove }: any) => {
+  return (
+    <View style={styles.card}>
+      <View>
+        <Text style={typography.h2}>{item.name}</Text>
+        <Text style={typography.bodySecondary}>ID: {item.id}</Text>
+        <View style={styles.debugBox}>
+          <Text style={styles.debugText}>Peer: {peerState.connectionState}</Text>
+          <Text style={styles.debugText}>ICE: {peerState.iceConnectionState}</Text>
+          <Text style={styles.debugText}>WebRTC Sig: {peerState.signalingState}</Text>
+        </View>
+      </View>
+      <View style={styles.actionButtons}>
+        {peerState.connectionState === 'Disconnected' ? (
+          <Button 
+            title="Connect" 
+            onPress={() => onConnect(item.id)} 
+            style={styles.connectBtn}
+          />
+        ) : (
+          <Button 
+            title="Disconnect" 
+            onPress={onDisconnect} 
+            style={styles.removeBtn}
+          />
+        )}
+        <Button 
+          title="Remove" 
+          onPress={() => onRemove(item.id)} 
+          style={styles.removeBtn} 
+        />
+      </View>
+    </View>
+  );
+});
+
 export default function ViewerScreen() {
   const { devices, removeDevice } = usePairingStore();
   const { connectionState } = useSignaling();
@@ -96,37 +132,13 @@ export default function ViewerScreen() {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={renderEmpty}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View>
-              <Text style={typography.h2}>{item.name}</Text>
-              <Text style={typography.bodySecondary}>ID: {item.id}</Text>
-              <View style={styles.debugBox}>
-                <Text style={styles.debugText}>Peer: {peerState.connectionState}</Text>
-                <Text style={styles.debugText}>ICE: {peerState.iceConnectionState}</Text>
-                <Text style={styles.debugText}>WebRTC Sig: {peerState.signalingState}</Text>
-              </View>
-            </View>
-            <View style={styles.actionButtons}>
-              {peerState.connectionState === 'Disconnected' ? (
-                <Button 
-                  title="Connect" 
-                  onPress={() => connectToPeer(item.id)} 
-                  style={styles.connectBtn}
-                />
-              ) : (
-                <Button 
-                  title="Disconnect" 
-                  onPress={() => disconnectPeer()} 
-                  style={styles.removeBtn}
-                />
-              )}
-              <Button 
-                title="Remove" 
-                onPress={() => removeDevice(item.id)} 
-                style={styles.removeBtn} 
-              />
-            </View>
-          </View>
+          <DeviceCard 
+            item={item}
+            peerState={peerState}
+            onConnect={connectToPeer}
+            onDisconnect={disconnectPeer}
+            onRemove={removeDevice}
+          />
         )}
       />
     </Screen>
