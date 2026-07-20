@@ -1,11 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, View, FlatList } from 'react-native';
+import { StyleSheet, Text, View, FlatList, ActivityIndicator } from 'react-native';
 import { Screen, Button } from '../src/components';
 import { typography, colors, spacing } from '../src/theme';
 import { usePairingStore } from '../src/store/usePairingStore';
 import { router } from 'expo-router';
 import { useSignaling } from '../src/hooks/useSignaling';
 import { usePeerConnection } from '../src/hooks/usePeerConnection';
+import { RTCView } from 'react-native-webrtc';
 
 export default function ViewerScreen() {
   const { devices, removeDevice } = usePairingStore();
@@ -19,6 +20,50 @@ export default function ViewerScreen() {
       default: return 'red';
     }
   };
+
+  if (peerState.connectionState === 'Connecting') {
+    return (
+      <Screen style={styles.loadingScreen}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Connecting to peer...</Text>
+        <Button 
+          title="Cancel" 
+          onPress={() => disconnectPeer()} 
+          style={styles.cancelBtn}
+        />
+      </Screen>
+    );
+  }
+
+  if (peerState.connectionState === 'Connected') {
+    return (
+      <View style={styles.fullScreenContainer}>
+        {peerState.remoteStream ? (
+          <RTCView
+            streamURL={peerState.remoteStream.toURL()}
+            style={StyleSheet.absoluteFill}
+            objectFit="cover"
+          />
+        ) : (
+          <View style={styles.noStreamContainer}>
+            <Text style={styles.noStreamText}>No Stream</Text>
+          </View>
+        )}
+        
+        <View style={styles.viewerDebugOverlay}>
+          <Text style={styles.debugText}>Peer: {peerState.connectionState}</Text>
+          <Text style={styles.debugText}>ICE: {peerState.iceConnectionState}</Text>
+          <Text style={styles.debugText}>WebRTC Sig: {peerState.signalingState}</Text>
+        </View>
+
+        <Button 
+          title="Disconnect" 
+          onPress={() => disconnectPeer()} 
+          style={styles.disconnectOverlayBtn}
+        />
+      </View>
+    );
+  }
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -161,5 +206,51 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'column',
     justifyContent: 'center',
+  },
+  fullScreenContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  noStreamContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noStreamText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  disconnectOverlayBtn: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    alignSelf: 'center',
+    backgroundColor: colors.error,
+    paddingHorizontal: spacing.xl,
+  },
+  loadingScreen: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.m,
+    color: colors.text,
+    fontFamily: 'monospace',
+  },
+  cancelBtn: {
+    marginTop: spacing.xl,
+    backgroundColor: colors.error,
+  },
+  viewerDebugOverlay: {
+    position: 'absolute',
+    top: spacing.xl,
+    left: spacing.m,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: spacing.m,
+    borderRadius: spacing.s,
   }
 });
