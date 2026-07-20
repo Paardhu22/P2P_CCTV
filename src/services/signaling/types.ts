@@ -33,9 +33,33 @@ export interface OnlineDevicesResponseMessage {
   }[];
 }
 
+export interface WebrtcOfferMessage {
+  type: 'offer';
+  targetDeviceId: string;
+  senderDeviceId?: string;
+  sdp: string;
+}
+
+export interface WebrtcAnswerMessage {
+  type: 'answer';
+  targetDeviceId: string;
+  senderDeviceId?: string;
+  sdp: string;
+}
+
+export interface WebrtcIceCandidateMessage {
+  type: 'ice_candidate';
+  targetDeviceId: string;
+  senderDeviceId?: string;
+  candidate: any;
+}
+
 export type SignalingMessage = 
   | RegisterMessage 
   | PingMessage 
   | PongMessage 
   | GetOnlineDevicesMessage 
-  | OnlineDevicesResponseMessage;
+  | OnlineDevicesResponseMessage
+  | WebrtcOfferMessage
+  | WebrtcAnswerMessage
+  | WebrtcIceCandidateMessage;
