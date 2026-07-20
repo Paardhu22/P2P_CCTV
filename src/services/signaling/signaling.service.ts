@@ -57,6 +57,11 @@ class SignalingService {
     this.send(msg);
   }
 
+  sendToDevice(targetDeviceId: string, payload: Omit<SignalingMessage, 'targetDeviceId' | 'senderDeviceId'>) {
+    const msg = { ...payload, targetDeviceId } as SignalingMessage;
+    this.send(msg);
+  }
+
   private handleStateChange(connected: boolean) {
     if (connected) {
       this.updateState('Connected');
