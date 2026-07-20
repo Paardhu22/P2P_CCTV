@@ -5,13 +5,17 @@ import { typography, colors, spacing } from '../src/theme';
 import { useCameraSetup } from '../src/hooks/useCameraSetup';
 import { Camera } from 'react-native-vision-camera';
 import { router } from 'expo-router';
+import { RTCView } from 'react-native-webrtc';
 import { useSignaling } from '../src/hooks/useSignaling';
 import { usePeerConnection } from '../src/hooks/usePeerConnection';
+import { useVideoStream } from '../src/hooks/useVideoStream';
 
 export default function CameraScreen() {
   const { device, hasPermission, requestPermission, isInitializing } = useCameraSetup();
   const { connectionState } = useSignaling();
   const { peerState } = usePeerConnection();
+  const isViewerConnected = peerState.connectionState === 'Connected';
+  const { stream, streamingState, error } = useVideoStream(isViewerConnected);
 
   const getStatusColor = () => {
     switch(connectionState) {
@@ -64,16 +68,28 @@ export default function CameraScreen() {
 
       {/* Camera Preview */}
       <View style={styles.cameraContainer}>
-        <Camera
-          style={StyleSheet.absoluteFill}
-          device={device}
-          isActive={true}
-        />
+        {isViewerConnected && stream ? (
+          <RTCView
+            streamURL={stream.toURL()}
+            style={StyleSheet.absoluteFill}
+            objectFit="cover"
+          />
+        ) : (
+          <Camera
+            style={StyleSheet.absoluteFill}
+            device={device}
+            isActive={true}
+          />
+        )}
+        
         <View style={styles.debugOverlay}>
           <Text style={styles.debugText}>Signaling: {connectionState}</Text>
           <Text style={styles.debugText}>Peer: {peerState.connectionState}</Text>
           <Text style={styles.debugText}>ICE: {peerState.iceConnectionState}</Text>
           <Text style={styles.debugText}>WebRTC Sig: {peerState.signalingState}</Text>
+          <Text style={styles.debugText}>Video: {streamingState}</Text>
+          
+          {error && <Text style={styles.errorText}>Video Error: {error.message}</Text>}
           
           {peerState.connectionState === 'Disconnected' && (
             <Text style={styles.waitingText}>Waiting for Peer...</Text>
@@ -166,5 +182,11 @@ const styles = StyleSheet.create({
     color: '#ffcc00',
     fontWeight: 'bold',
     marginTop: spacing.s,
+  },
+  errorText: {
+    color: '#ff0000',
+    fontWeight: 'bold',
+    marginTop: spacing.s,
+    fontSize: 12,
   }
 });
