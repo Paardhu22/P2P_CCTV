@@ -4,9 +4,19 @@ import { Screen, Button } from '../src/components';
 import { typography, colors, spacing } from '../src/theme';
 import { usePairingStore } from '../src/store/usePairingStore';
 import { router } from 'expo-router';
+import { useSignaling } from '../src/hooks/useSignaling';
 
 export default function ViewerScreen() {
   const { devices, removeDevice } = usePairingStore();
+  const { connectionState } = useSignaling();
+
+  const getStatusColor = () => {
+    switch(connectionState) {
+      case 'Connected': return 'green';
+      case 'Connecting': return 'orange';
+      default: return 'red';
+    }
+  };
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -20,7 +30,13 @@ export default function ViewerScreen() {
   return (
     <Screen style={styles.container}>
       <View style={styles.header}>
-        <Text style={typography.title}>Viewer Dashboard</Text>
+        <View>
+          <Text style={typography.title}>Viewer Dashboard</Text>
+          <View style={styles.statusContainer}>
+            <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
+            <Text style={typography.bodySecondary}>{connectionState}</Text>
+          </View>
+        </View>
         <Button 
           title="Scan QR to Pair" 
           onPress={() => router.push('/viewer/scan')} 
@@ -93,5 +109,16 @@ const styles = StyleSheet.create({
   },
   removeBtn: {
     backgroundColor: colors.error,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: spacing.s,
   },
 });
