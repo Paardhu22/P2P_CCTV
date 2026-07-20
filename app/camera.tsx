@@ -66,6 +66,18 @@ export default function CameraScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Error Banners */}
+      {connectionState === 'Offline' && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>Signaling Server Offline. Reconnecting...</Text>
+        </View>
+      )}
+      {(peerState.connectionState === 'Failed' || peerState.iceConnectionState === 'failed') && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>Peer Connection Failed. Attempting recovery...</Text>
+        </View>
+      )}
+
       {/* Camera Preview */}
       <View style={styles.cameraContainer}>
         {isViewerConnected && stream ? (
@@ -140,6 +152,16 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: spacing.s,
+  },
+  errorBanner: {
+    backgroundColor: colors.error,
+    padding: spacing.s,
+    alignItems: 'center',
+  },
+  errorBannerText: {
+    color: '#fff',
+    ...typography.bodySecondary,
+    fontWeight: 'bold',
   },
   cameraContainer: {
     flex: 1,
