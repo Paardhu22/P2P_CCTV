@@ -1,30 +1,41 @@
 import { mediaDevices, MediaStream } from 'react-native-webrtc';
 import { peerService } from '../webrtc/peer.service';
+import { Logger } from '../../utils/logger';
 
 class VideoService {
   private localStream: MediaStream | null = null;
+  private initializingPromise: Promise<MediaStream> | null = null;
 
   public async startLocalStream(): Promise<MediaStream> {
     if (this.localStream) {
       return this.localStream;
     }
-
-    try {
-      const stream = await mediaDevices.getUserMedia({
-        audio: false, 
-        video: {
-          facingMode: 'environment', 
-        }
-      });
-      
-      this.localStream = stream as MediaStream;
-      peerService.setLocalStream(this.localStream);
-      
-      return this.localStream;
-    } catch (error) {
-      console.error('Error accessing media devices:', error);
-      throw error;
+    if (this.initializingPromise) {
+      return this.initializingPromise;
     }
+
+    this.initializingPromise = (async () => {
+      try {
+        const stream = await mediaDevices.getUserMedia({
+          audio: false, 
+          video: {
+            facingMode: 'environment', 
+          }
+        });
+        
+        this.localStream = stream as MediaStream;
+        peerService.setLocalStream(this.localStream);
+        
+        return this.localStream;
+      } catch (error) {
+        Logger.error('Error accessing media devices:', error);
+        throw error;
+      } finally {
+        this.initializingPromise = null;
+      }
+    })();
+
+    return this.initializingPromise;
   }
 
   public stopLocalStream() {
