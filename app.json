@@ -32,6 +32,13 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "Private P2P CCTV needs access to your camera to function as a security node.",
+          "enableMicrophonePermission": false
+        }
       ]
     ],
     "experiments": {
